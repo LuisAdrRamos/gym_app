@@ -20,20 +20,21 @@ export default function DashboardScreen() {
     const userName = user.name || user.email;
 
     return (
-        <ScrollView style={tabsStyles.container}>
+        <View style={tabsStyles.container}>
             <View style={tabsStyles.dashboardHeader}>
                 <View>
                     <Text style={tabsStyles.welcomeText}>¡Hola, {userName}!</Text>
                     <Text style={tabsStyles.roleBadge}>Rol: {role}</Text>
                 </View>
-                {/* El botón de Salir está en el header global, por eso no se repite aquí */}
             </View>
 
             {role === 'Entrenador' ? (
+                // TrainerDashboard usa FlatList, no necesita ScrollView externa.
                 <TrainerDashboard user={user} />
             ) : (
+                // UserDashboard debe asegurarse de usar su propia ScrollView interna.
                 <UserDashboard user={user} />
             )}
-        </ScrollView>
+        </View>
     );
 }

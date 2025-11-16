@@ -7,8 +7,10 @@ export interface IRoutineRepository {
     create(data: CreateRutinaData): Promise<Rutina>;
 
     /**
-     * Obtiene todas las rutinas creadas por un entrenador específico.
-     */
+         * Obtiene todas las rutinas creadas por un entrenador específico.
+         * @param entrenador_id - El ID del entrenador.
+         * @returns Una lista de rutinas. [cite: 333, 334]
+         */
     findByTrainer(entrenador_id: string): Promise<Rutina[]>;
 
     /**

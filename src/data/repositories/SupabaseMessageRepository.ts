@@ -8,17 +8,18 @@ export class SupabaseMessageRepository implements IMessageRepository {
     private channel: RealtimeChannel | null = null;
 
     async getMessages(sender_id: string, receiver_id: string): Promise<Mensaje[]> {
-        // Obtenemos el historial de mensajes donde (A es sender Y B es receiver) O (B es sender Y A es receiver)
-        const { data, error } = await supabase
-            .from('mensajes') // Asumiendo que la tabla se llama 'mensajes'
-            .select('*')
-            .or(`(sender_id.eq.${sender_id},receiver_id.eq.${receiver_id}),(sender_id.eq.${receiver_id},receiver_id.eq.${sender_id})`)
-            .order('created_at', { ascending: true });
+
+        // 🟢 SOLUCIÓN FINAL: Llamar a la función nativa de PostgreSQL
+        const { data, error } = await supabase.rpc('get_conversation_messages', {
+            user_id_a: sender_id,
+            user_id_b: receiver_id,
+        });
 
         if (error) {
-            console.error("Error fetching messages:", error.message);
-            throw new Error(`Error al obtener los mensajes: ${error.message}`);
+            console.error("Error fetching messages (RPC):", error.message);
+            throw new Error(`No se pudo cargar el historial: ${error.message}`);
         }
+        // El resultado de rpc ya viene como un arreglo de Mensajes
         return data || [];
     }
 

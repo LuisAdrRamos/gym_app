@@ -6,6 +6,7 @@ import { useTraining } from '../../src/presentation/hooks/useTraining';
 import * as ImagePicker from 'expo-image-picker';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 
 interface TrainerDashboardProps {
     user: User;
@@ -16,7 +17,7 @@ export default function TrainerDashboard({ user }: TrainerDashboardProps) {
     const [routineDesc, setRoutineDesc] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadingId, setUploadingId] = useState<number | null>(null);
-
+    const [uploadProgress, setUploadProgress] = useState(0);
     const { routines, loading, refetchRoutines, createRoutine, uploadRoutineVideo } = useTraining();
 
     const handleCreateRoutine = async () => {
@@ -43,43 +44,74 @@ export default function TrainerDashboard({ user }: TrainerDashboardProps) {
     const handlePickAndUploadVideo = async (routineId: number) => {
         setUploadingId(routineId);
 
-        try {
-            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (permission.granted === false) {
-                Alert.alert("Permiso denegado", "Se necesita acceso a la galería para subir videos.");
-                setUploadingId(null);
-                return;
-            }
+        // 1. Solicitar permisos (Cámara y Galería)
+        const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+        const libraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-                allowsEditing: true,
-                quality: 0.7,
-            });
+        if (cameraPermission.granted === false || libraryPermission.granted === false) {
+            Alert.alert("Permiso denegado", "Se necesita acceso a la cámara y la galería para grabar y subir videos.");
+            setUploadingId(null);
+            return;
+        }
 
-            if (result.canceled) {
-                setUploadingId(null);
-                return;
-            }
-
-            const asset = result.assets[0];
-
-            // 1. Determinar el tipo MIME y URI
+        const processUpload = async (asset: ImagePicker.ImagePickerAsset) => {
             const fileUri = asset.uri;
             const contentType = asset.mimeType || 'video/mp4';
 
             // 2. Subir el archivo y actualizar la rutina
-            await uploadRoutineVideo(routineId, fileUri, contentType);
-
+            await uploadRoutineVideo(
+                routineId,
+                fileUri,
+                contentType,
+                (progress) => setUploadProgress(progress) // 🟢 Pasamos el callback de progreso
+            );
             Alert.alert("Éxito", "Video subido y asociado a la rutina.");
+        };
 
+        try {
+            Alert.alert(
+                "Seleccionar Video",
+                "¿De dónde deseas obtener el video demostrativo?",
+                [
+                    // Opción 1: Abrir la CÁMARA (Grabar Video)
+                    {
+                        text: "Grabar Video",
+                        onPress: async () => {
+                            const result = await ImagePicker.launchCameraAsync({
+                                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+                                allowsEditing: true,
+                                quality: 0.7,
+                                videoMaxDuration: 60, // Límite de 60 segundos por si acaso
+                            });
+                            if (!result.canceled) {
+                                await processUpload(result.assets[0]);
+                            }
+                        }
+                    },
+                    // Opción 2: Abrir la GALERÍA (Seleccionar Video)
+                    {
+                        text: "Galería",
+                        onPress: async () => {
+                            const result = await ImagePicker.launchImageLibraryAsync({
+                                mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+                                allowsEditing: true,
+                                quality: 0.7,
+                            });
+                            if (!result.canceled) {
+                                await processUpload(result.assets[0]);
+                            }
+                        }
+                    },
+                    { text: "Cancelar", style: "cancel" }
+                ]
+            );
         } catch (error) {
-            Alert.alert("Error", "No se pudo subir el video.");
+            Alert.alert("Error", "No se pudo subir/grabar el video.");
+            console.error(error);
         } finally {
             setUploadingId(null);
         }
     };
-
 
     const renderRoutineItem = ({ item }: { item: any }) => (
         <View style={tabsStyles.routineItem}>
@@ -87,9 +119,13 @@ export default function TrainerDashboard({ user }: TrainerDashboardProps) {
                 <Text style={tabsStyles.routineName}>{item.nombre}</Text>
                 <Text style={tabsStyles.subtitle}>{item.descripcion}</Text>
                 {item.video_url && (
-                    <Text style={tabsStyles.videoLink}>
-                        <Ionicons name="videocam" /> Video adjunto
-                    </Text>
+                    <TouchableOpacity
+                        onPress={() => WebBrowser.openBrowserAsync(item.video_url)}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}
+                    >
+                        <Ionicons name="videocam" color={tabsStyles.videoLink.color} />
+                        <Text style={tabsStyles.videoLink}> Reproducir Video</Text>
+                    </TouchableOpacity>
                 )}
             </View>
 
@@ -104,6 +140,28 @@ export default function TrainerDashboard({ user }: TrainerDashboardProps) {
                         {uploadingId === item.id ? "Subiendo..." : (item.video_url ? "Cambiar Video" : "Subir Video")}
                     </Text>
                 </TouchableOpacity>
+
+                {uploadingId === item.id && (
+                    <View
+                        style={{
+                            width: 120,
+                            height: 5,
+                            backgroundColor: '#ddd', // Color de borde fijo
+                            borderRadius: 3,
+                            marginTop: 5
+                        }}
+                    >
+                        <View
+                            style={{
+                                width: `${uploadProgress}%`,
+                                height: '100%',
+                                // Usamos el valor directo del color principal (#007AFF) para evitar el error de tipado
+                                backgroundColor: '#007AFF',
+                                borderRadius: 3
+                            }}
+                        />
+                    </View>
+                )}
 
                 {/* 2. Botón de Asignar Plan */}
                 <Link

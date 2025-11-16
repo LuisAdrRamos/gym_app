@@ -101,8 +101,23 @@ export const useTraining = () => {
 
     // --- OPERACIONES (Storage) ---
     // Simula la subida de videos
-    const uploadRoutineVideo = async (routineId: number, fileUri: string, contentType: string) => {
+    const uploadRoutineVideo = async (
+        routineId: number,
+        fileUri: string,
+        contentType: string,
+        // 🟢 ACEPTAR FUNCIÓN DE PROGRESO
+        onProgress?: (progress: number) => void
+    ) => {
         if (!user) return { success: false, error: "Usuario no autenticado" };
+
+        // 🟢 SIMULACIÓN DE PROGRESO (Reemplazar con la lógica real si estuviera disponible)
+        if (onProgress) {
+            onProgress(10);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            onProgress(50);
+            await new Promise(resolve => setTimeout(resolve, 300));
+            onProgress(90);
+        }
 
         try {
             // 1. Subir a Storage
@@ -113,17 +128,11 @@ export const useTraining = () => {
                 fileUri,
                 contentType
             );
-
-            // 2. Actualizar URL en la DB
-            const updatedRoutine = await container.routineRepository.updateVideoUrl(routineId, uploadResult.publicUrl);
-
-            // 3. Actualizar estado local
-            setRoutines(prev => prev.map(r => r.id === routineId ? updatedRoutine : r));
-
-            return { success: true, url: updatedRoutine.video_url };
+            // ... (resto del código)
+            if (onProgress) onProgress(100); // 🟢 Progreso al 100%
+            // ...
         } catch (error: any) {
-            Alert.alert("Error de Subida", error.message);
-            return { success: false, error: error.message };
+            // ...
         }
     };
 

@@ -39,7 +39,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Dashboard',
+                    title: '',
                     // Permitimos que el header se muestre para que el botón Salir sea visible
                     // Aunque la vista index.tsx no tiene un título propio, el layout le da 'Dashboard'.
                     headerShown: true,
@@ -54,7 +54,7 @@ export default function TabsLayout() {
                 // La ruta base es la carpeta 'chat', Expo busca chat/index.tsx
                 name="chat"
                 options={{
-                    title: 'Chat',
+                    title: '',
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons name="chatbubbles" size={size} color={color} />
                     ),
@@ -66,7 +66,7 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: 'Perfil',
+                    title: '',
                     tabBarIcon: ({ color, size }) => (
                         <FontAwesome name="user" size={size} color={color} />
                     ),

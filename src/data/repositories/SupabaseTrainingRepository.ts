@@ -42,26 +42,56 @@ export class SupabaseTrainingPlanRepository implements ITrainingPlanRepository {
     }
 
     async getAllUsers(): Promise<UserProfileForAssignment[]> {
-        // La consulta es a la tabla 'profiles' para obtener la lista de usuarios.
         const { data: users, error } = await supabase
             .from('profiles')
-            // Seleccionamos solo los campos necesarios según la interfaz UserProfileForAssignment
-            .select('id, name, role, email:auth_users(email)') // Supabase permite joins así (si la FK existe)
-            .eq('role', 'Usuario'); // Filtramos solo por el rol 'Usuario'
+            // 🟢 CORRECCIÓN: Seleccionar solo campos de 'profiles'
+            .select('id, name, role, email') // Quitamos ':auth_users(email)'
+            .eq('role', 'Usuario');
 
         if (error) {
             console.error("Error fetching users for assignment:", error.message);
             throw new Error(`Error al obtener la lista de usuarios: ${error.message}`);
         }
-        
+
         // Mapeamos los datos de la consulta para asegurarnos de que el email se extraiga correctamente
+        // Ahora 'user.email' debería existir si se llenó correctamente el campo
         return (users || []).map(user => ({
             id: user.id,
             name: user.name,
             role: user.role,
-            // 🟢 ASUNCION: El email es difícil de obtener sin un trigger/vista. 
-            // Para el deber, si el name es visible, el email se usará solo en el login.
-            email: (user as any).email || 'Email no disponible', 
+            email: user.email || 'Email no disponible',
         })) as UserProfileForAssignment[];
+    }
+
+    /**
+     * Obtiene el perfil del entrenador para un usuario.
+     */
+    async getTrainerByUserId(usuario_id: string): Promise<UserProfile | null> {
+        // 1. Encontrar los planes asignados a este usuario
+        const { data: plans, error: planError } = await supabase
+            .from('planes_entrenamiento')
+            .select('entrenador_id')
+            .eq('usuario_id', usuario_id)
+            .limit(1); // Solo necesitamos uno para obtener el ID del entrenador
+
+        if (planError || !plans || plans.length === 0) {
+            return null;
+        }
+
+        const entrenador_id = plans[0].entrenador_id;
+
+        // 2. Obtener el perfil del entrenador
+        const { data: trainer, error: trainerError } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, role')
+            .eq('id', entrenador_id)
+            .single();
+
+        if (trainerError) {
+            console.error("Error fetching trainer profile:", trainerError.message);
+            return null;
+        }
+
+        return trainer as UserProfile;
     }
 }

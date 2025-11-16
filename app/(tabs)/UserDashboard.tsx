@@ -16,28 +16,60 @@ export default function UserDashboard({ user }: UserDashboardProps) {
     const [comment, setComment] = useState('');
     const [imageUri, setImageUri] = useState<string | null>(null);
     const [isSubmittingProgress, setIsSubmittingProgress] = useState(false);
-    
+
     const { plans, loading: loadingPlans, refetchPlans } = useTraining();
     const { progressList, loading: loadingProgress, refetchProgress, registerProgress } = useProgress();
 
     // --- MANEJO DE IMAGEN ---
     const handlePickImage = async () => {
-        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (permission.granted === false) {
-            Alert.alert("Permiso denegado", "Se necesita acceso a la galería.");
+        // 1. Solicitar permiso de CÁMARA
+        const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+
+        // 2. Solicitar permiso de GALERÍA
+        const libraryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+        if (cameraPermission.granted === false || libraryPermission.granted === false) {
+            Alert.alert("Permiso denegado", "Se necesita acceso a la cámara y la galería para subir fotos de progreso.");
             return;
         }
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 0.8,
-            aspect: [4, 3],
-        });
-
-        if (!result.canceled) {
-            setImageUri(result.assets[0].uri);
-        }
+        Alert.alert(
+            "Seleccionar Foto",
+            "¿De dónde deseas obtener la foto de progreso?",
+            [
+                // Opción 1: Abrir la CÁMARA
+                {
+                    text: "Cámara",
+                    onPress: async () => {
+                        const result = await ImagePicker.launchCameraAsync({
+                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                            allowsEditing: true,
+                            quality: 0.8,
+                            aspect: [4, 3],
+                        });
+                        if (!result.canceled) {
+                            setImageUri(result.assets[0].uri);
+                        }
+                    }
+                },
+                // Opción 2: Abrir la GALERÍA
+                {
+                    text: "Galería",
+                    onPress: async () => {
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                            allowsEditing: true,
+                            quality: 0.8,
+                            aspect: [4, 3],
+                        });
+                        if (!result.canceled) {
+                            setImageUri(result.assets[0].uri);
+                        }
+                    }
+                },
+                { text: "Cancelar", style: "cancel" }
+            ]
+        );
     };
 
     const handleSubmitProgress = async () => {
@@ -45,9 +77,9 @@ export default function UserDashboard({ user }: UserDashboardProps) {
             Alert.alert("Error", "Por favor, añade un comentario y selecciona una foto.");
             return;
         }
-        
+
         setIsSubmittingProgress(true);
-        
+
         const data: RegisterProgressData = {
             usuario_id: user.id,
             comentarios: comment,
@@ -78,9 +110,9 @@ export default function UserDashboard({ user }: UserDashboardProps) {
 
     const renderProgressItem = ({ item }: { item: any }) => (
         <View style={tabsStyles.progressHistoryItem}>
-            <Image 
-                source={{ uri: item.foto_url }} 
-                style={tabsStyles.progressImage} 
+            <Image
+                source={{ uri: item.foto_url }}
+                style={tabsStyles.progressImage}
             />
             <View style={tabsStyles.progressDetails}>
                 <Text style={tabsStyles.progressComment}>{item.comentarios}</Text>
@@ -119,11 +151,11 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                     onChangeText={setComment}
                     multiline
                 />
-                
+
                 {imageUri && (
-                    <Image 
-                        source={{ uri: imageUri }} 
-                        style={tabsStyles.progressImagePreview} 
+                    <Image
+                        source={{ uri: imageUri }}
+                        style={tabsStyles.progressImagePreview}
                     />
                 )}
 
@@ -140,7 +172,7 @@ export default function UserDashboard({ user }: UserDashboardProps) {
                     onPress={handleSubmitProgress}
                     disabled={isSubmittingProgress || !imageUri}
                     // 🟢 CORRECCIÓN: Usamos el objeto ColorPalette.secondary para el color verde
-                    color={ColorPalette.secondary} 
+                    color={ColorPalette.secondary}
                 />
             </View>
 
