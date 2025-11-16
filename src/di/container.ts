@@ -19,11 +19,12 @@ import { GetRoutinesByTrainer } from '../domain/usecases/training/GetRutinesByTr
 import { GetAllUsersForAssignment } from '../domain/usecases/training/GetAllUsersForAssigment';
 import { AssignTrainingPlan } from '../domain/usecases/training/AssignTrainingPlan';
 import { GetPlansForUser } from '../domain/usecases/training/GetPlansForUser';
+import { GetTrainerForUser } from '../domain/usecases/training/GetTrainerForUser';
 
 // --- CASOS DE USO DE CHAT (Próximos) ---
-import { SendMensaje } from '../domain/usecases/chat/SendMensaje'; 
+import { SendMensaje } from '../domain/usecases/chat/SendMensaje';
 import { GetMessages } from '../domain/usecases/chat/GetMessages';
-import { RegisterProgress } from '../domain/usecases/training/RegisterProgress'; // Usaremos uno nuevo
+import { RegisterProgress } from '../domain/usecases/training/RegisterProgress';
 
 // --- IMPLEMENTACIONES DE DATA ---
 import { AuthRepositoryImpl } from '../data/repositories/AuthRepositoryImpl';
@@ -58,12 +59,13 @@ class DIContainer {
     private _getAllUsersForAssignment?: GetAllUsersForAssignment;
     private _assignTrainingPlan?: AssignTrainingPlan;
     private _getPlansForUser?: GetPlansForUser;
-    
+    private _getTrainerForUser?: GetTrainerForUser;
+
     private _registerProgress?: RegisterProgress; // Nuevo
 
-    private _sendMensaje?: SendMensaje; 
-    private _getMessages?: GetMessages; 
-    
+    private _sendMensaje?: SendMensaje;
+    private _getMessages?: GetMessages;
+
     private constructor() { }
 
     static getInstance(): DIContainer {
@@ -79,42 +81,42 @@ class DIContainer {
 
     get authRepository(): AuthRepository {
         if (!this._authRepository) {
-            this._authRepository = new AuthRepositoryImpl(); 
+            this._authRepository = new AuthRepositoryImpl();
         }
         return this._authRepository;
     }
 
     get routineRepository(): IRoutineRepository {
         if (!this._routineRepository) {
-            this._routineRepository = new SupabaseRoutineRepository(); 
+            this._routineRepository = new SupabaseRoutineRepository();
         }
         return this._routineRepository;
     }
 
     get planRepository(): ITrainingPlanRepository {
         if (!this._planRepository) {
-            this._planRepository = new SupabaseTrainingPlanRepository(); 
+            this._planRepository = new SupabaseTrainingPlanRepository();
         }
         return this._planRepository;
     }
 
     get progressRepository(): IProgressRepository {
         if (!this._progressRepository) {
-            this._progressRepository = new SupabaseProgressRepository(); 
+            this._progressRepository = new SupabaseProgressRepository();
         }
         return this._progressRepository;
     }
 
     get storageRepository(): IStorageRepository {
         if (!this._storageRepository) {
-            this._storageRepository = new SupabaseStorageRepository(); 
+            this._storageRepository = new SupabaseStorageRepository();
         }
         return this._storageRepository;
     }
 
     get messageRepository(): IMessageRepository {
         if (!this._messageRepository) {
-            this._messageRepository = new SupabaseMessageRepository(); 
+            this._messageRepository = new SupabaseMessageRepository();
         }
         return this._messageRepository;
     }
@@ -185,6 +187,13 @@ class DIContainer {
             this._getPlansForUser = new GetPlansForUser(this.planRepository);
         }
         return this._getPlansForUser;
+    }
+
+    get getTrainerForUser(): GetTrainerForUser {
+        if (!this._getTrainerForUser) {
+            this._getTrainerForUser = new GetTrainerForUser(this.planRepository);
+        }
+        return this._getTrainerForUser;
     }
 
     // --- PROGRESS (NUEVO) ---

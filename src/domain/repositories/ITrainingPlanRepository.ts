@@ -21,4 +21,6 @@ export interface ITrainingPlanRepository {
      * Obtiene una lista de todos los usuarios con el rol 'Usuario' para ser asignados.
      */
     getAllUsers(): Promise<UserProfileForAssignment[]>;
+
+    getTrainerByUserId(usuario_id: string): Promise<UserProfileForAssignment | null>;
 }

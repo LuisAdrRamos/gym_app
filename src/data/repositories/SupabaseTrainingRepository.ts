@@ -2,6 +2,8 @@ import { ITrainingPlanRepository, UserProfileForAssignment } from "../../domain/
 import { PlanEntrenamiento, CreatePlanData } from "../../domain/entities/PlanEntrenamiento";
 import { supabase } from "../services/supabaseClient";
 
+type UserProfile = UserProfileForAssignment;
+
 export class SupabaseTrainingPlanRepository implements ITrainingPlanRepository {
 
     async assignPlan(data: CreatePlanData): Promise<PlanEntrenamiento> {
@@ -72,7 +74,7 @@ export class SupabaseTrainingPlanRepository implements ITrainingPlanRepository {
             .from('planes_entrenamiento')
             .select('entrenador_id')
             .eq('usuario_id', usuario_id)
-            .limit(1); // Solo necesitamos uno para obtener el ID del entrenador
+            .limit(1);
 
         if (planError || !plans || plans.length === 0) {
             return null;
@@ -80,10 +82,11 @@ export class SupabaseTrainingPlanRepository implements ITrainingPlanRepository {
 
         const entrenador_id = plans[0].entrenador_id;
 
-        // 2. Obtener el perfil del entrenador
+        // 2. Obtener el perfil del entrenador (usando los campos correctos: name, role, email)
         const { data: trainer, error: trainerError } = await supabase
             .from('profiles')
-            .select('id, username, full_name, role')
+            // 🟢 CORRECCIÓN DE CAMPOS: Usar name y email
+            .select('id, name, role, email')
             .eq('id', entrenador_id)
             .single();
 
@@ -92,6 +95,12 @@ export class SupabaseTrainingPlanRepository implements ITrainingPlanRepository {
             return null;
         }
 
-        return trainer as UserProfile;
+        // 3. Mapear a la entidad UserProfileForAssignment
+        return {
+            id: trainer.id,
+            name: trainer.name,
+            role: trainer.role,
+            email: trainer.email,
+        } as UserProfile;
     }
 }

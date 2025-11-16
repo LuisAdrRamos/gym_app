@@ -51,29 +51,53 @@ export const useTraining = () => {
         }
     }, [role, user?.id]);
 
-    const fetchUsersForAssignment = useCallback(async () => {
-        if (!isTrainer) return;
+    // 🟢 Lógica unificada para cargar usuarios/entrenadores para chat/asignación
+    const fetchUsersForChat = useCallback(async () => {
+        if (!user?.id) return;
         try {
-            const fetchedUsers = await container.getAllUsersForAssignment.execute();
-            // La entidad UserForAssignment coincide con el retorno del Use Case (UserProfileForAssignment)
-            setUsersList(fetchedUsers as UserForAssignment[]);
-        } catch (error: any) {
-            Alert.alert("Error", "No se pudo cargar la lista de usuarios: " + error.message);
-        }
-    }, [isTrainer]);
+            let fetchedUsers: UserForAssignment[] = [];
 
-    // Efecto que ejecuta las cargas según el rol
+            if (isTrainer) {
+                // 1. Lógica del Entrenador: Obtener todos los Usuarios para asignar/chatear
+                const result = await container.getAllUsersForAssignment.execute();
+                fetchedUsers = result as UserForAssignment[];
+
+            } else {
+                // 2. Lógica del Usuario: Buscar solo a su Entrenador
+                const trainerProfile = await container.getTrainerForUser.execute(user.id);
+
+                if (trainerProfile) {
+                    // Mapeamos el perfil del entrenador al tipo de la lista
+                    fetchedUsers = [{
+                        id: trainerProfile.id,
+                        name: trainerProfile.name || trainerProfile.email,
+                        email: trainerProfile.email,
+                        role: trainerProfile.role,
+                    } as UserForAssignment];
+                }
+            }
+
+            setUsersList(fetchedUsers);
+
+        } catch (error: any) {
+            Alert.alert("Error", "No se pudo cargar la lista de contactos: " + error.message);
+        }
+    }, [isTrainer, user?.id]);
+
+
+    // 🟢 Efecto que ejecuta las cargas según el rol
     useEffect(() => {
         if (!authLoading && user) {
+            // Siempre cargamos la lista de chat/asignación, independientemente del rol.
+            fetchUsersForChat();
+
             if (isTrainer) {
                 fetchRoutines();
-                fetchUsersForAssignment();
             } else {
                 fetchPlans();
             }
         }
-    }, [authLoading, user, isTrainer, fetchRoutines, fetchPlans, fetchUsersForAssignment]);
-
+    }, [authLoading, user, isTrainer, fetchRoutines, fetchPlans, fetchUsersForChat]);
     // --- OPERACIONES (Entrenador) ---
 
     const createRoutine = async (data: CreateRutinaData) => {
@@ -149,6 +173,6 @@ export const useTraining = () => {
         // Funciones para recargar
         refetchRoutines: fetchRoutines,
         refetchPlans: fetchPlans,
-        fetchUsersForAssignment,
+        fetchUsersForAssignment: fetchUsersForChat,
     };
 };
