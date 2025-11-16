@@ -23,6 +23,7 @@ export default function TabsLayout() {
                 tabBarActiveTintColor: '#007AFF',
                 headerStyle: { backgroundColor: '#FFFFFF' },
                 headerTintColor: '#333333',
+                // 🟢 MOVEMOS EL BOTÓN SALIR AL HEADER DERECHO DEL GRUPO TABS
                 headerRight: () => (
                     <Button
                         onPress={handleLogout}
@@ -30,34 +31,38 @@ export default function TabsLayout() {
                         color="#FF3B30"
                     />
                 ),
-                headerTitleStyle: { fontWeight: 'bold' }
+                headerTitleStyle: { fontWeight: 'bold' },
+                headerShown: true, // Aseguramos que todas las pestañas tengan el header de SALIR
             }}
         >
-            {/* 1. DASHBOARD DINÁMICO (Contiene TrainerDashboard/UserDashboard) */}
+            {/* 1. DASHBOARD (Ruta index.tsx) */}
             <Tabs.Screen
                 name="index"
                 options={{
                     title: 'Dashboard',
-                    headerShown: false,
+                    // Permitimos que el header se muestre para que el botón Salir sea visible
+                    // Aunque la vista index.tsx no tiene un título propio, el layout le da 'Dashboard'.
+                    headerShown: true,
                     tabBarIcon: ({ color, size }) => (
                         <FontAwesome name="dashboard" size={size} color={color} />
                     ),
                 }}
             />
 
-            {/* 2. LISTA DE CONTACTOS DE CHAT */}
+            {/* 2. CHAT (Ruta chat/index.tsx) */}
             <Tabs.Screen
+                // La ruta base es la carpeta 'chat', Expo busca chat/index.tsx
                 name="chat"
                 options={{
                     title: 'Chat',
-                    headerShown: true,
                     tabBarIcon: ({ color, size }) => (
                         <Ionicons name="chatbubbles" size={size} color={color} />
                     ),
+                    // headerShown: true se hereda de screenOptions
                 }}
             />
 
-            {/* 3. PERFIL */}
+            {/* 3. PERFIL (Ruta profile.tsx) */}
             <Tabs.Screen
                 name="profile"
                 options={{
@@ -65,14 +70,20 @@ export default function TabsLayout() {
                     tabBarIcon: ({ color, size }) => (
                         <FontAwesome name="user" size={size} color={color} />
                     ),
-                    headerShown: true,
+                    // headerShown: true se hereda de screenOptions
                 }}
             />
 
-            {/* RUTAS OCULTAS QUE NO DEBEN SER PESTAÑAS */}
-            <Tabs.Screen name="assign-plan" options={{ href: null, headerShown: false, title: 'Asignar Plan' }} />
+            {/* RUTAS OCULTAS QUE NO DEBEN SER PESTAÑAS (Componentes / Vistas Secundarias) */}
+
+            {/* Las rutas TrainerDashboard.tsx y UserDashboard.tsx son componentes, se ocultan: */}
             <Tabs.Screen name="TrainerDashboard" options={{ href: null, headerShown: false }} />
             <Tabs.Screen name="UserDashboard" options={{ href: null, headerShown: false }} />
+
+            {/* assign-plan.tsx (Vista modal/secundaria) */}
+            <Tabs.Screen name="assign-plan" options={{ href: null, headerShown: true, title: 'Asignar Plan' }} />
+
+            {/* chat/[receiverId].tsx (Vista dinámica de conversación) */}
             <Tabs.Screen name="chat/[receiverId]" options={{ href: null, headerShown: true }} />
         </Tabs>
     );
