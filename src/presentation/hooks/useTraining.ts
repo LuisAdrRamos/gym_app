@@ -1,3 +1,5 @@
+// FILE: src/presentation/hooks/useTraining.ts
+
 import { useState, useEffect, useCallback } from 'react';
 import { container } from '@/src/di/container';
 import { useAuth } from './useAuth';
@@ -6,7 +8,7 @@ import { PlanEntrenamiento } from '@/src/domain/entities/PlanEntrenamiento';
 import { CreatePlanData } from '@/src/domain/entities/PlanEntrenamiento';
 import { Alert } from 'react-native';
 
-// Definición de un tipo para la lista de usuarios (sin la complejidad de la entidad User completa)
+// Definición de un tipo para la lista de usuarios
 export interface UserForAssignment {
     id: string;
     name: string;
@@ -20,7 +22,6 @@ export const useTraining = () => {
     const [plans, setPlans] = useState<PlanEntrenamiento[]>([]);
     const [usersList, setUsersList] = useState<UserForAssignment[]>([]);
     const [loading, setLoading] = useState(true);
-
     const isTrainer = role === 'Entrenador';
 
     // --- CARGA DE DATOS ---
@@ -51,23 +52,22 @@ export const useTraining = () => {
         }
     }, [role, user?.id]);
 
-    // 🟢 Lógica unificada para cargar usuarios/entrenadores para chat/asignación
+    // Lógica unificada para cargar usuarios/entrenadores para chat/asignación
     const fetchUsersForChat = useCallback(async () => {
         if (!user?.id) return;
         try {
             let fetchedUsers: UserForAssignment[] = [];
 
             if (isTrainer) {
-                // 1. Lógica del Entrenador: Obtener todos los Usuarios para asignar/chatear
+                // Lógica del Entrenador: Obtener todos los Usuarios
                 const result = await container.getAllUsersForAssignment.execute();
                 fetchedUsers = result as UserForAssignment[];
 
             } else {
-                // 2. Lógica del Usuario: Buscar solo a su Entrenador
+                // Lógica del Usuario: Buscar solo a su Entrenador
                 const trainerProfile = await container.getTrainerForUser.execute(user.id);
 
                 if (trainerProfile) {
-                    // Mapeamos el perfil del entrenador al tipo de la lista
                     fetchedUsers = [{
                         id: trainerProfile.id,
                         name: trainerProfile.name || trainerProfile.email,
@@ -84,13 +84,10 @@ export const useTraining = () => {
         }
     }, [isTrainer, user?.id]);
 
-
-    // 🟢 Efecto que ejecuta las cargas según el rol
+    // Efecto que ejecuta las cargas según el rol
     useEffect(() => {
         if (!authLoading && user) {
-            // Siempre cargamos la lista de chat/asignación, independientemente del rol.
             fetchUsersForChat();
-
             if (isTrainer) {
                 fetchRoutines();
             } else {
@@ -98,6 +95,7 @@ export const useTraining = () => {
             }
         }
     }, [authLoading, user, isTrainer, fetchRoutines, fetchPlans, fetchUsersForChat]);
+
     // --- OPERACIONES (Entrenador) ---
 
     const createRoutine = async (data: CreateRutinaData) => {
@@ -124,17 +122,15 @@ export const useTraining = () => {
     };
 
     // --- OPERACIONES (Storage) ---
-    // Simula la subida de videos
     const uploadRoutineVideo = async (
         routineId: number,
         fileUri: string,
         contentType: string,
-        // 🟢 ACEPTAR FUNCIÓN DE PROGRESO
         onProgress?: (progress: number) => void
     ) => {
         if (!user) return { success: false, error: "Usuario no autenticado" };
 
-        // 🟢 SIMULACIÓN DE PROGRESO (Reemplazar con la lógica real si estuviera disponible)
+        // Simulación de progreso
         if (onProgress) {
             onProgress(10);
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -147,19 +143,36 @@ export const useTraining = () => {
             // 1. Subir a Storage
             const filePath = `${user.id}/routines/${routineId}/${new Date().getTime()}.${contentType.split('/')[1]}`;
             const uploadResult = await container.storageRepository.upload(
-                'videos_ejercicios',
+                'videos_ejercicios', // Asegúrate que el bucket se llame así
                 filePath,
                 fileUri,
                 contentType
             );
-            // ... (resto del código)
-            if (onProgress) onProgress(100); // 🟢 Progreso al 100%
-            // ...
+
+            // 2. 🟢 (CORREGIDO) Actualizar la URL en la base de datos (tabla 'rutinas')
+            const updatedRoutine = await container.routineRepository.updateVideoUrl(
+                routineId,
+                uploadResult.publicUrl // Guardamos la URL pública
+            );
+
+            // 3. 🟢 (CORREGIDO) Actualizar el estado local para que la UI reaccione
+            setRoutines(prev =>
+                prev.map(r => (r.id === routineId ? updatedRoutine : r))
+            );
+
+            if (onProgress) onProgress(100);
+
+            // 4. 🟢 (CORREGIDO) Retornar éxito
+            return { success: true, url: updatedRoutine.video_url };
+
         } catch (error: any) {
-            // ...
+            // 5. 🟢 (CORREGIDO) Manejar el error
+            console.error("Error en uploadRoutineVideo:", error);
+            Alert.alert("Error de Subida", error.message);
+            if (onProgress) onProgress(0); // Resetea el progreso
+            return { success: false, error: error.message };
         }
     };
-
 
     return {
         routines,
@@ -170,7 +183,6 @@ export const useTraining = () => {
         createRoutine,
         assignPlan,
         uploadRoutineVideo,
-        // Funciones para recargar
         refetchRoutines: fetchRoutines,
         refetchPlans: fetchPlans,
         fetchUsersForAssignment: fetchUsersForChat,
